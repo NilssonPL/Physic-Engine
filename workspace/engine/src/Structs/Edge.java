@@ -11,7 +11,7 @@ public class Edge {
 		point2 = p2;
 		
 		Vec2 tmp = p2.sub(p1);
-		normal = new Vec2(-tmp.y, tmp.x);
+		normal = new Vec2(tmp.y, -tmp.x);
 		normal.normalize();
 	}
 	

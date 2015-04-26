@@ -61,22 +61,25 @@ public class CollisionDetection {
 	{
 		float minDistance = Float.MAX_VALUE;
 	
-		ArrayList<Edge> edges1 = a.GetEdges();
-		ArrayList<Edge> edges2 = b.GetEdges();
+		ArrayList<Vec2> points1 = a.GetPoints(true);
+		ArrayList<Vec2> points2 = b.GetPoints(true);
 		
 		m.A = a;
 		m.B = b;
 	
-		for(int i = 0; i < edges1.size() + edges2.size(); i++)
+		for(int i = 0; i < points1.size() + points2.size(); i++)
 		{
 			Edge e;
-			if(i < edges1.size())
-				e = edges1.get(i);
+			if(i < points1.size())
+				e =  new Edge(points1.get(i), points1.get((i + 1) % points1.size()));
 			else
-				e = edges2.get(i - edges1.size());
+			{
+				int index = i - points1.size();
+				e = new Edge(points2.get(index), points2.get((index + 1) % points2.size()));
+			}
 			
-			float minMax1[] = ProjectRigidBody(e.normal, a);
-			float minMax2[] = ProjectRigidBody(e.normal, b);
+			float minMax1[] = ProjectRigidBody(e.normal, points1);
+			float minMax2[] = ProjectRigidBody(e.normal, points2);
 			
 			float distance;
 			if(minMax1[0] <= minMax2[0])
@@ -85,10 +88,10 @@ public class CollisionDetection {
 				distance = minMax1[0] - minMax2[1];
 			
 			
-			if(distance >= 0.0f)
+			if(distance > 0.0f)
 				return false;
 			
-			if(Math.abs(distance) <= minDistance)
+			if(Math.abs(distance) < minDistance)
 			{
 				minDistance = Math.abs(distance);
 				m.normal = e.normal;
@@ -99,16 +102,15 @@ public class CollisionDetection {
 		Vec2 d = a.position.sub(b.position);
 		if(d.dot(m.normal) > 0)
 			m.normal = m.normal.mult(-1f);
-		a.Move(m.normal.mult(m.penetration).mult(-1f));
+		a.position = a.position.add(m.normal.mult(m.penetration).mult(-1f));
 
 		
 		return true;
 	}
 	
-	private static float[] ProjectRigidBody(Vec2 axis, RigidBody r)
+	private static float[] ProjectRigidBody(Vec2 axis, ArrayList<Vec2> points)
 	{
 		float result[] = new float[2];
-		ArrayList<Vec2> points = r.GetPoints();
 		result[0] = Float.MAX_VALUE;
 		result[1] = -Float.MAX_VALUE;
 		
@@ -147,14 +149,7 @@ public class CollisionDetection {
 		
 		float massSum = a.massData.mass + b.massData.mass;
 		
-		float ratio = a.massData.mass / massSum;
-		a.velocity = a.velocity.sub(impulse.mult(a.massData.inverseMass * ratio));
-		
-		ratio = b.massData.mass / massSum;
-		b.velocity = b.velocity.add(impulse.mult(b.massData.inverseMass * ratio));
-		
-		
-		rv = b.velocity.sub(a.velocity);
+
 		
 		Vec2 tangent = rv.sub(m.normal.mult(rv.dot(m.normal)));
 		tangent.normalize();
@@ -172,11 +167,18 @@ public class CollisionDetection {
 			frictionImpulse = tangent.mult(-j * dynamicFriction);
 		}
 		
-		ratio = a.massData.mass / massSum;
-		a.velocity = a.velocity.sub(frictionImpulse.mult(a.massData.inverseMass * ratio));
+		Vec2 finalImpulse = frictionImpulse.add(impulse);
+		
+		float ratio = a.massData.mass / massSum;
+		a.velocity = a.velocity.sub(finalImpulse.mult(a.massData.inverseMass * ratio));
 		
 		ratio = b.massData.mass / massSum;
-		b.velocity = b.velocity.add(frictionImpulse.mult(b.massData.inverseMass * ratio));
+		b.velocity = b.velocity.add(finalImpulse.mult(b.massData.inverseMass * ratio));
+		
+		a.angularVelocity += a.massData.inverse_invertia * m.normal.dot(finalImpulse);
+		
+		b.angularVelocity += b.massData.inverse_invertia * m.normal.dot(finalImpulse);
+		
 	}
 	
 	public static void PositionalCorrection(PhysicObject a, PhysicObject b, Manifold m)
@@ -184,9 +186,7 @@ public class CollisionDetection {
 		  float percent = 0.8f; // usually 20% to 80%
 		  float slop = 0.01f; // usually 0.01 to 0.1
 		  float correction = (float) Math.max(m.penetration - slop, 0.0f ) / (a.massData.inverseMass + b.massData.inverseMass) * percent;
-		  a.Move(m.normal.mult(a.massData.inverseMass * correction).mult(-1f));
-		  b.Move(m.normal.mult(b.massData.inverseMass * correction));
-		  //a.position = a.position.sub();
-		  //b.position = b.position.add(m.normal.mult(b.massData.inverseMass * correction));
+		  a.position = a.position.sub(m.normal.mult(a.massData.inverseMass * correction));
+		  b.position = b.position.add(m.normal.mult(b.massData.inverseMass * correction));
 	}
 }

@@ -53,9 +53,4 @@ public class PhysicObject {
 		force.x = 0.0f;
 		force.y = 0.0f;
 	}
-	
-	public void Move(Vec2 move)
-	{
-		position = position.add(new Vec2(move.x, move.y));
-	}
 }

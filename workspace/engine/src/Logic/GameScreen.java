@@ -4,6 +4,7 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.Polygon;
+import java.awt.geom.AffineTransform;
 import java.awt.image.BufferStrategy;
 import java.util.ArrayList;
 import java.util.Vector;
@@ -37,13 +38,20 @@ public class GameScreen implements Runnable{
 		
 		m_aabbVector = new Vector<RigidBody>();
 		
-		PhysicObject po = new PhysicObject(0.0f, 0.0f, new MassData( 0.0f, (float) Math.random()), new Material((float) Math.random(),  (float) Math.random()));
+		PhysicObject po = new PhysicObject(1.0f, 1.0f, new MassData( 0.0f, (float) Math.random()), new Material((float) Math.random(),  (float) Math.random()));
 		int y = 40;
 		
 
 		//m_aabbVector.add(new AABB(new Vec2(m_screenDimension.width * 0.5f, m_screenDimension.height), m_screenDimension.width, 0, po));
 		//m_aabbVector.add(new AABB(new Vec2(m_screenDimension.width, m_screenDimension.height * 0.5f), 0.0f, m_screenDimension.height, po));
 		
+		ArrayList<Vec2> points = new ArrayList<Vec2>();
+		points.add(new Vec2(10, 10));
+		points.add(new Vec2(10, -10));
+		//points.add(new Vec2(0, -15f));
+		points.add(new Vec2(-10, -10));
+		points.add(new Vec2(-10, 10));
+		//points.add(new Vec2(0, 15f));
 		
 		for(int i = 0; i < 4; i++)
 		{
@@ -51,14 +59,8 @@ public class GameScreen implements Runnable{
 			po = new PhysicObject(1.0f, 1.0f, new MassData( 3-i, (float) Math.random()), new Material((float) Math.random(),  (float) Math.random()));
 			for(int j = 0; j < 10; j++)
 			{
-				ArrayList<Vec2> points = new ArrayList<Vec2>();
-				points.add(new Vec2(x, y));
-				//points.add(new Vec2(x + 10, y-10));
-				points.add(new Vec2(x + 20, y));
-				points.add(new Vec2(x + 20, y + 20));
-				//points.add(new Vec2(x + 10, y + 30));
-				points.add(new Vec2(x, y + 20));
-				RigidBody r = new RigidBody(points, po);
+				
+				RigidBody r = new RigidBody(new Vec2(x, y), points, po);
 				//AABB aabb = new AABB(new Vec2(x, y), 20, 20, po);
 				//m_aabbVector.add(aabb);
 				//aabb.AddForce(new Vec2((float) Math.random() * 10.0f, (float) Math.random() * 10.0f));
@@ -86,7 +88,7 @@ public class GameScreen implements Runnable{
 			UpdatePhysics(time * 0.01f);
 			
 			Render(g);
-			g.dispose();
+			
 			m_bufferStrategy.show();
 			long currentNanoTime = System.nanoTime();
 			
@@ -148,7 +150,7 @@ public class GameScreen implements Runnable{
 		graphics.setColor(Color.RED);
 		graphics.setFont(new Font("Dialog", Font.BOLD, 18));
 		graphics.drawString("" + m_frames, 20, 20);
-		
+		AffineTransform transform = graphics.getTransform();
 		for(int i = 0; i < m_aabbVector.size(); i++)
 		{
 			graphics.setColor(Color.BLACK);
@@ -156,7 +158,10 @@ public class GameScreen implements Runnable{
 			//graphics.drawRect((int) rect.min.x, (int) rect.min.y, (int) rect.max.x - (int) rect.min.x, (int) rect.max.x - (int) rect.min.x);
 			
 			RigidBody r = m_aabbVector.get(i);
-			ArrayList<Vec2> points = r.GetPoints();
+			ArrayList<Vec2> points = r.GetPoints(false);
+			//graphics.scale(1.0f, 1.0f);
+			//graphics.rotate(r.orientation);
+			
 			Polygon p = new Polygon();
 			
 			for(int j = 0; j < points.size(); j++)
@@ -165,8 +170,12 @@ public class GameScreen implements Runnable{
 				p.addPoint((int) Math.round(point.x), (int) Math.round(point.y));
 			}
 			
+			graphics.translate(r.position.x, r.position.y);
 			graphics.drawPolygon(p);
+			graphics.setTransform(transform);
+			
 		}
+		graphics.dispose();
 	}
 	
 	public void SetBufferStrategy(BufferStrategy bufferStrategy)
